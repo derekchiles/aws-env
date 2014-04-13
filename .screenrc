@@ -1,0 +1,10 @@
+nethack on
+vbell on
+startup_message off
+defscrollback 100000
+caption string "%?%F%{= Bk}%? %C%A %D %d-%m-%Y %{= kB} %t%= %?%F%{= Bk}%:%{= wk}%? %n "
+
+backtick 1 1 1 sh -c "date '+%H:%M:%S%z'"
+
+hardstatus alwayslastline '%{= kG}[ %{G}%H %{g}][%= %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %d %M %{W}%1` %{g}]'
+
