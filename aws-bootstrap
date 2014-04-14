@@ -1,8 +1,21 @@
 #!/bin/bash
+#
+# This script is intended to be executed via the EC2 User Data facility. Just
+# add the following command to your user data at instance creation time:
+#
+#   bash -c "$(curl http://bit.ly/1eocBY6)"
+#
+# To read more about what this script is doing:
+#
+#   https://github.com/derekchiles/aws-env
+#
+# To read more about EC2 User Data:
+#
+#   https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html
+#
 
 AWS_ENV_GIT_URL=https://github.com/derekchiles/aws-env
 VUNDLE_GIT_URL=https://github.com/gmarik/Vundle.vim
-
 EC2_USER_HOME=~ec2-user
 AWS_ENV_HOME="${EC2_USER_HOME}/aws-env"
 
@@ -14,5 +27,7 @@ git clone "${AWS_ENV_GIT_URL}"
 git clone "${VUNDLE_GIT_URL}" ~/.vim/bundle/vundle
 
 ln -s "${AWS_ENV_HOME}/screenrc" "${EC2_USER_HOME}/.screenrc"
+ln -s "${AWS_ENV_HOME}/vimrc" "${EC2_USER_HOME}/.vimrc"
+
 echo ". ${AWS_ENV_HOME}/bin/ec2-init" >> "${EC2_USER_HOME}/.bashrc"
 
