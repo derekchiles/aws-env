@@ -1,0 +1,26 @@
+#!/bin/bash
+
+DUO_UNIX_SRC_URL=https://dl.duosecurity.com/duo_unix-latest.tar.gz
+LOGIN_DUO_CONF_BUCKET=s3.derekch.com
+LOGIN_DUO_CONF_KEY=login_duo.conf
+
+tmp_dir=$(mktemp -dt /tmp/duo_unix.XXXXXX)
+if [ $? -ne 0 ]; then
+	echo "Unable to make temp dir, exiting."
+	exit 1
+fi
+
+cd "${tmp_dir}"
+curl -LO "${DUO_UNIX_SRC_URL}"
+tar xvfz duo_unix-latest.tar.gz
+
+root_dir=$(find . -mindepth 1 -maxdepth 1 -type d)
+cd "${root_dir}"
+
+./configure --prefix=/opt/duo_unix && make && make install
+
+aws s3api get-object \
+	--bucket "${LOGIN_DUO_CONF_BUCKET}" \
+	--key "${LOGIN_DUO_CONF_KEY}" \
+	/etc/duo/login_duo.conf
+
