@@ -1,0 +1,18 @@
+#!/bin/bash
+
+AWS_ENV_GIT_URL=https://github.com/derekchiles/aws-env
+VUNDLE_GIT_URL=https://github.com/gmarik/Vundle.vim
+
+EC2_USER_HOME=~ec2-user
+AWS_ENV_HOME="${EC2_USER_HOME}/aws-env"
+
+sudo yum update -y
+sudo yum install -y git
+
+cd ~ec2-user
+git clone "${AWS_ENV_GIT_URL}" 
+git clone "${VUNDLE_GIT_URL}" ~/.vim/bundle/vundle
+
+ln -s "${AWS_ENV_HOME}/screenrc" "${EC2_USER_HOME}/.screenrc"
+echo ". ${AWS_ENV_HOME}/bin/ec2-init" >> "${EC2_USER_HOME}/.bashrc"
+
