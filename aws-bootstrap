@@ -36,3 +36,5 @@ sudo -u ec2-user ln -s "${AWS_ENV_HOME}/vimrc" "${EC2_USER_HOME}/.vimrc"
 
 echo ". ${AWS_ENV_HOME}/bin/ec2-init" >> "${EC2_USER_HOME}/.bashrc"
 
+bash "${AWS_ENV_HOME}/configure-duo"
+

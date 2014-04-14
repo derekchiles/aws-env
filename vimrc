@@ -19,14 +19,14 @@ Bundle 'ervandew/supertab'
 Bundle 'AutoComplPop'
 
 if has("gui_running")
-    colorscheme base16-default
+    colorscheme murphy
     set background=dark
     set guifont=Inconsolata-dz\ for\ Powerline:h14
     set guioptions-=T   " get rid of toolbar
     set guioptions-=r   " and scrollbar
     set guioptions-=L   " and menubar
 else
-    colorscheme base16-default
+    colorscheme murphy
     set background=dark
 endif
 

@@ -5,6 +5,7 @@ defscrollback 100000
 caption string "%?%F%{= Bk}%? %C%A %D %d-%m-%Y %{= kB} %t%= %?%F%{= Bk}%:%{= wk}%? %n "
 
 backtick 1 1 1 sh -c "date '+%H:%M:%S%z'"
+backtick 2 3600 3600 sh -c "curl -q http://169.254.169.254/latest/meta-data/instance-id"
 
-hardstatus alwayslastline '%{= kG}[ %{G}%H %{g}][%= %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %d %M %{W}%1` %{g}]'
+hardstatus alwayslastline '%{= kG}[ %{G}%2` %{g}][%= %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %d %M %{W}%1` %{g}]'
 

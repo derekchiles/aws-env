@@ -15,6 +15,12 @@ __aws-env-set-prompt() {
 	local -r LIGHT_RED="\[\033[1;31m\]"
 
 	PS1="${WHITE}[${LIGHT_CYAN}\u${WHITE}@${CYAN}${instance_id}${WHITE}]${NO_COLOR}"
-	PS1="${PS1} ${WHITE}(${LIGHT_RED}${AWS_USER}${WHITE}@${RED}${AWS_REGION:-us-east-1}${WHITE})${NO_COLOR}"
+	PS1="${PS1} ${WHITE}(${LIGHT_RED}${role_name}${WHITE})${NO_COLOR} $ "
 
 }
+
+__aws-env-set-prompt
+
+set -o vi
+set -o notify
+

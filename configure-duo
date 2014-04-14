@@ -25,6 +25,7 @@ aws s3api get-object \
 	--key "${LOGIN_DUO_CONF_KEY}" \
 	/etc/duo/login_duo.conf
 
+echo >> /etc/ssh/sshd_config
 echo "ForceCommand ${DUO_PREFIX}/sbin/login_duo" >> /etc/ssh/sshd_config
 echo "PermitTunnel no" >> /etc/ssh/sshd_config
 echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config
