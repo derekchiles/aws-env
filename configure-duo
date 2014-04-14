@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DUO_UNIX_SRC_URL=https://dl.duosecurity.com/duo_unix-latest.tar.gz
+DUO_PREFIX=/opt/duo_unix
 LOGIN_DUO_CONF_BUCKET=s3.derekch.com
 LOGIN_DUO_CONF_KEY=login_duo.conf
 
@@ -17,10 +18,14 @@ tar xvfz duo_unix-latest.tar.gz
 root_dir=$(find . -mindepth 1 -maxdepth 1 -type d)
 cd "${root_dir}"
 
-./configure --prefix=/opt/duo_unix && make && make install
+./configure --prefix=${DUO_PREFIX} && make && make install
 
 aws s3api get-object \
 	--bucket "${LOGIN_DUO_CONF_BUCKET}" \
 	--key "${LOGIN_DUO_CONF_KEY}" \
 	/etc/duo/login_duo.conf
+
+echo "ForceCommand ${DUO_PREFIX}/sbin/login_duo" >> /etc/duo/login_duo.conf
+echo "PermitTunnel no" >> /etc/duo/login_duo.conf
+echo "AllowTcpForwarding no" >> /etc/duo/login_duo.conf
 

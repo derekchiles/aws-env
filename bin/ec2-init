@@ -2,8 +2,8 @@
 
 METADATA_URL="http://169.254.169.254/latest/meta-data"
 
-instance_id=$(curl ${METADATA_URL}/instance-id})
-role_name=$(curl ${METADATA_URL}/iam/ecurity-credentials/)
+instance_id=$(curl -s ${METADATA_URL}/instance-id)
+role_name=$(curl -s ${METADATA_URL}/iam/security-credentials/)
 
 __aws-env-set-prompt() {
 	local -r NO_COLOR="\[\033[0m\]"
