@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# This script is intended to be executed via the EC2 User Data facility. Just
-# add the following command to your user data at instance creation time:
+# This script is intended to be executed via the EC2 User Data facility. If
+# your instance has access to the Internet (via an Internet Gateway or NAT
+# instance), you can source this script at instance creation time like this:
 #
 #   bash -c "$(curl http://bit.ly/1eocBY6)"
 #
