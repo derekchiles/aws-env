@@ -1,0 +1,9 @@
+[duo]
+ikey=
+skey=
+host=
+failmode=safe
+pushinfo=yes
+autopush=yes
+prompts=1
+

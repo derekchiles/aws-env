@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# Downloads, compiles, deploys, and configures the login_duo module from
+# Duo Securty (https://www.duosecurity.com).
+#
+# This script expects to download the login_duo.conf from an Amazon S3 bucket
+# for which the appropriate permissions have already been configured.
+#
+# Prerequisites:
+#
+#   - gcc
+#   - openssl-devel
+#   - aws-cli
+#
+# Parameters:
+#
+#   <s3 bucket name> the name of the S3 bucket containing login_duo.conf
+#   <s3 key> the S3 key to the login_duo.conf file
+#
+##############################################################################
+
+if [ $# -ne 2 ]; then
+	echo "Usage: $0 <s3 bucket name> <s3 key>"
+	exit 1
+fi
+
+LOGIN_DUO_CONF_BUCKET="$1"
+LOGIN_DUO_CONF_KEY="$2"
+
+DUO_UNIX_SRC_URL=https://dl.duosecurity.com/duo_unix-latest.tar.gz
+DUO_PREFIX=/opt/duo_unix
+
+tmp_dir=$(mktemp -d /tmp/duo_unix.XXXXXX)
+if [ $? -ne 0 ]; then
+	echo "$0: Unable to create temp dir, exiting."
+	exit 1
+fi
+
+cd "${tmp_dir}"
+
+curl -sLO "${DUO_UNIX_SRC_URL}"
+tar xvfz duo_unix-latest.tar.gz
+
+root_dir=$(find . -mindepth 1 -maxdepth 1 -type d)
+cd "${root_dir}"
+
+./configure --prefix=${DUO_PREFIX} && make && make install
+
+aws s3api get-object \
+	--bucket "${LOGIN_DUO_CONF_BUCKET}" \
+	--key "${LOGIN_DUO_CONF_KEY}" \
+	/etc/duo/login_duo.conf
+
+echo >> /etc/ssh/sshd_config
+echo "ForceCommand ${DUO_PREFIX}/sbin/login_duo" >> /etc/ssh/sshd_config
+echo "PermitTunnel no" >> /etc/ssh/sshd_config
+echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config
+
+service sshd restart
+

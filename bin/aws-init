@@ -1,20 +1,35 @@
 #!/bin/bash
-
-###########################################################################
+#
+# Copyright 2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+# http://aws.amazon.com/apache2.0
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+##############################################################################
 #
 # aws-init
 #
-# Author: Derek Chiles <derekch@amazon.com>
-#
-###########################################################################
-
 # DESCRIPTION
-# 
-# This file does several things:
 #
-# 1. It exports the aws_set_region function, allowing the user
+# aws-init provides helper functions for users who execute AWS API commands
+# 
+# the EC2 network. If you are looking for helper functions to run from an
+# EC2 instance, please see the ec2-init script.
+#
+# This file is intended to be sourced via a user's ~/.bashrc at shell
+# initialization time. It will provide the following functionality:
+#
+# 1. It exports the aws-set-region function, allowing the user
 #    to quickly switch between AWS Regions
-# 2. It exports the aws_set_user function, allowing the user
+# 2. It exports the aws-set-profile function, allowing the user
 #    to quickly switch between sets of AWS credentials (typically
 #    representing IAM users)
 # 3. It sets the bash prompt to include the currently selected AWS
@@ -38,29 +53,19 @@
 # but EC2 users should prefer IAM roles to authenticate their AWS API
 # commands. You can read more about IAM Roles here:
 #
-#   <url>
-#
-# aws-init can automatically reset your prompt for you whenever you
-# change the AWS user or AWS Region, and this is the default behavior.
-# If you would like to disable the auto-setting of your prompt,
-# you can set the AWS_AUTO_SET_PROMPT variable to a value of "false"
-# and export the variable.
+#   http://amzn.to/1hUKkJv
 #
 # EXAMPLE
 #
 # Add the following to your ~/.bashrc or equivalent:
 #
-#     . "${HOME}/bin/aws-init"
+#     . /path/to/aws-init
 #
-#     export AWS_AUTO_SET_PROMPT=false
-#     export AWS_AUTO_SET_PROMPT=true
+#     aws-set-profile my-aws-user
 #     aws-set-region us-west-2
-#     aws-set-user my-aws-user
 #
-# AWS_INIT_AUTO_SET_PROMPT
 # AWS_INIT_VERBOSE
 # AWS_INIT_DEBUG
-#
 #
 
 __ai-log() {
@@ -85,6 +90,19 @@ __ai-failmsg() {
 __ai-export() {
 	__ai-log "Exporting: ${1}=${2}"
 	export ${1}="${2}"
+}
+
+__ai-get-env-var() {
+	local __outvar="${1}"
+	local env_var_name="${2}"
+	local default_value="${3}"
+
+	eval var_value=\$$env_var_name
+	if [ -n "${var_value}" ]; then
+		\$$__outvar="${var_value}"
+	else
+		\$$__outvar="${default_value}"
+	fi
 }
 
 __ai-require-env-var() {
@@ -114,17 +132,17 @@ __ai-require-file() {
 __ai-require-bitmask() {
 	local filename="${1}"
 	local required_bitmask="${2}"
-    local file_mode
-    local leftover_bits
+	local file_mode
+	local leftover_bits
 
-    __ai-require-file "$filename" || return 1
+	__ai-require-file "$filename" || return 1
 
 	file_mode=$(stat -f '0%OLp' ${filename})
 	leftover_bits=$(( ${file_mode} & ${required_bitmask} ))
 	
-    __ai-log "Checking bitmask for file ${filename}"
-    __ai-log "Required bitmask: ${required_bitmask}"
-    __ai-log-printf "Actual mode: %04o" ${file_mode}
+	__ai-log "Checking bitmask for file ${filename}"
+	__ai-log "Required bitmask: ${required_bitmask}"
+	__ai-log-printf "Actual mode: %04o" ${file_mode}
 	__ai-log-printf "Leftover bits: %04o" ${leftover_bits}
 
 	if [ $leftover_bits -ne 0 ]; then
@@ -137,32 +155,78 @@ __ai-require-bitmask() {
 	fi
 }
 
-__ai-read-credential() {
-	local -r __outvar="${1}"
-	local -r propname="${2}"
-	local -r filename="${3}"
-    local key
-    local value
+__ai-update-region-cache() {
+	AWS_DEFAULT_REGION=us-east-1 aws ec2 describe-regions \
+		--output text | cut -f3 > "${HOME}/.aws/regions"
+
+	if [ $? -ne 0 ]; then
+		rm "${HOME}/.aws/regions"
+	fi
+}
+
+#
+# We maintain a cache of the list of region names at ~/.aws/regions
+#
+# The list of regions should update relatively infrequently. We attempt
+# to update it at every script load time (i.e. every login). If the
+# cached list is not available then we skip the validation check.
+#
+__ai-validate-region() {
+	local -r region_name="${1}"
+
+	if [ -e ~/.aws/regions ]; then
+		grep -q "${region_name}" ~/.aws/regions
+		if [ $? -ne 0 ]; then
+			echo "Invalid region '${region_name}'"
+			return 1
+		fi
+	fi
+}
+
+#
+# [profile <profile-name>]
+# aws_access_key_id=<id>
+# aws_secret_access_key=<key>
+#
+__ai-validate-profile() {
+	local -r filename="${1}"
+	local -r profile_name="${2}"
 
 	__ai-require-bitmask "${filename}" 0077 || return 1
 
-	while read line; do
-		key=$(echo "${line}" | cut -d "=" -f 1)
-		value=$(echo "${line}" | cut -d "=" -f 2)
-
-        echo "Checking: [$key] [$propname]"
-		if [ "${key}" = "${propname}" ]; then
-            echo "Found value for key: $key => $value"
-			eval $__outvar=\$value
-			return 0
-		fi
-	done < "${filename}"
-
-	__ai-failmsg "Property \"${propname}\" is not defined in credentials file \"${filename}\""
-	return 1
+	grep -q "\[profile $profile_name\]" "${filename}"
+	if [ $? -ne 0 ]; then
+		echo "Invalid profile '${profile_name}'"
+		return 1
+	fi
 }
 
-aws-set-prompt() {
+__aws-set-region-completer() {
+	local regions
+	local cur="${COMP_WORDS[COMP_CWORD]}"
+
+	if [ -e ~/.aws/regions ]; then
+		read -d '' -r -a regions < ~/.aws/regions
+		COMPREPLY=( $(compgen -W '${regions[@]}' -- $cur) )
+	fi
+}
+
+__aws-set-profile-completer() {
+	local config_file="${AWS_CONFIG_FILE:-${HOME}/.aws/config}"
+
+	local cur="${COMP_WORDS[COMP_CWORD]}"
+	profiles=( $(grep profile ${config_file} \
+		| cut -d' ' -f2 | cut -d] -f1 ) )
+
+	COMPREPLY=( $(compgen -W '${profiles[@]}' -- $cur) )
+}
+
+#
+# Set the prompt to look something like this:
+#
+# [local-user@local-host] (aws-profile@aws-region) <wd> $
+#
+__ai-set-prompt() {
 	local -r NO_COLOR="\[\033[0m\]"
 	local -r WHITE="\[\033[1;37m\]"
 	local -r GRAY="\[\033[1;30m\]"
@@ -171,93 +235,66 @@ aws-set-prompt() {
 	local -r RED="\[\033[0;31m\]"
 	local -r LIGHT_RED="\[\033[1;31m\]"
 
-	if [ "${AWS_AUTO_SET_PROMPT}" = "true" ]; then
-		PS1="${WHITE}[${LIGHT_CYAN}\u${WHITE}@${CYAN}\h${WHITE}]${NO_COLOR}"
+	# [local-user
+	PS1="${WHITE}[${LIGHT_CYAN}\u${WHITE}"
 
-		if [ -n "${AWS_USER}" ]; then
-			PS1="${PS1} ${WHITE}(${LIGHT_RED}${AWS_USER}${WHITE}@${RED}${AWS_REGION:-us-east-1}${WHITE})${NO_COLOR}"
-		fi
+	# @local-host]
+	PS1="${PS1}@${CYAN}\h${WHITE}]${NO_COLOR}"
 
-		PS1="${PS1} \W \$ "
+	# (aws-profile
+	PS1="${PS1} ${WHITE}(${LIGHT_RED}\$(echo \${AWS_DEFAULT_PROFILE:-default})${WHITE}"
 
-		export PS1
-	fi
+	# @aws-region)
+	PS1="${PS1}@${RED}\$(echo \${AWS_DEFAULT_REGION:-no-region})${WHITE})${NO_COLOR}"
+
+	# <wd> $
+	PS1="${PS1} \W \$ "
+
+	export PS1
 }
 
-aws-set-user() {
-	__ai-require-env-var "${AWS_AUTH_DIR}"
-
+aws-set-profile() {
 	if [ $# -ne 1 ]; then
-		echo "Usage: aws-set-user <user-name>"
+		echo "Usage: aws-set-profile <profile-name>"
 		return 1
 	fi
 
-	local -r username="${1}"
-	local access_key
-	local secret_key
-	local cred_file
+	local -r profile="${1}"
 
-	#local -r x509_pem="${AWS_AUTH_DIR}/${username}.x509.pem"
-	#local -r x509_key="${AWS_AUTH_DIR}/${username}.x509.key"
-	cred_file="${AWS_AUTH_DIR}/${username}.awscredentials"
+	local config_file="${AWS_CONFIG_FILE:-${HOME}/.aws/config}"
+	__ai-validate-profile "${config_file}" "${profile}" || return 1
 
-	#__ai-require-file "${x509_pem}"
-	#__ai-require-file "${x509_key}"
-	#__ai-require-file "${cred_file}"
-
-	__ai-read-credential access_key "AWSAccessKeyID" "${cred_file}" \
-        || return 1
-
-	__ai-read-credential secret_key "AWSSecretKey" "${cred_file}" \
-        || return 1
-
-	# CLIs that speak RESTful web services will use these:
-	__ai-export AWS_USER "${username}"
-	__ai-export AWS_ACCESS_KEY "${access_key}"
-	#__ai-export AWS_CREDENTIAL_FILE "${cred_file}"
-	__ai-export AWS_SECRET_KEY "${secret_key}"
-
-	# Ruby SDK wants these
-	__ai-export AWS_ACCESS_KEY_ID "${access_key}"
-	__ai-export AWS_SECRET_ACCESS_KEY "${secret_key}"
-	__ai-export AWS_CREDENTIAL_FILE "${cred_file}"
-
-	# CLIs that speak legacy SOAP web services will use these:
-	#__ai-export EC2_CERT "${x509_pem}"
-	#__ai-export EC2_PRIVATE_KEY "${x509_key}"
-
-	aws-set-prompt
-	return 0
-
-	echo "aws-set-user: User ${username} is not defined."
-	return 1
+	# New AWS CLI
+	__ai-export AWS_DEFAULT_PROFILE "${profile}"
 }
 
 aws-set-region() {
 	if [ $# -ne 1 ]; then
 		echo "Usage: aws-set-region <region-name>"
 		return 1
-	elif [ -z "${AWS_USER}" ]; then
-		echo "aws-set-region: You must call aws-set-user before invoking this command"
-		return 1
 	fi
 
-	while read foo region_name region_endpoint; do
-		if [ "${region_name}" == "${1}" ]; then
-			__ai-export AWS_REGION "${region_name}"
-			__ai-export EC2_REGION "${region_name}"
-			__ai-export AWS_URL "https://${region_endpoint}"
-			__ai-export EC2_URL "https://${region_endpoint}"
+	local -r region="${1}"
 
-			aws-set-prompt
-			return 0
-		fi
-	done < <(ec2-describe-regions)
-
-	echo "$0: Region \"${1}\" does not exist" 
-	return 1
+	__ai-validate-region "${region}" || return 1
+	__ai-export AWS_DEFAULT_REGION "${region}"
 }
 
-__ai-require-env-var "${AWS_AUTH_DIR}"
-aws-set-prompt
+#
+# Update the region cache in a forked process, to avoid hanging in case
+# we don't have network access
+#
+nohup -- bash -c "$(declare -f __ai-update-region-cache); __ai-update-region-cache" > /dev/null 2>&1 0</dev/null
+
+#
+#
+#
+#if [ -z "${AWS_DEFAULT_REGION}" ]; then
+	#aws-set-region us-east-1
+#fi
+
+complete -F __aws-set-region-completer aws-set-region
+complete -F __aws-set-profile-completer aws-set-profile
+
+__ai-set-prompt
 
