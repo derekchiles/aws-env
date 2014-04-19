@@ -1,0 +1,17 @@
+#!/bin/bash
+
+yum install -y figlet
+
+cat > /tmp/motd <<EOM
+------------------------------------------------------------------------------
+It won't hug you back!
+EOM
+
+sudo -u ec2-user figlet "${instance_id}" >> /tmp/motd
+
+cat >> /tmp/motd <<EOM
+------------------------------------------------------------------------------
+EOM
+
+cp /tmp/motd /etc/motd
+

@@ -7,7 +7,7 @@ __ae-get-metadata() {
 	local key="${2}"
 
 	value=$(curl -s ${METADATA_URL}/${key})
-	$__outvar="${value}"
+	eval $__outvar="${value}"
 }
 
 __ae-get-metadata instance_id instance-id
@@ -34,7 +34,7 @@ __ae-set-prompt() {
 	PS1="${PS1}@${CYAN}${instance_id}${WHITE}]${NO_COLOR}"
 
 	# (aws-profile
-	PS1="${PS1} ${WHITE}(${LIGHT_RED}${role_name}${WHITE}"
+	PS1="${PS1} ${WHITE}(${LIGHT_RED}${role_name:-no-user}${WHITE}"
 
 	# @aws-region)
 	PS1="${PS1}@${RED}\$(echo \${AWS_DEFAULT_REGION:-no-region})${WHITE})${NO_COLOR}"

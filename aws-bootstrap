@@ -49,6 +49,11 @@ yum update -y
 
 yum install -y git gcc openssl-devel python python-devel screen figlet
 
+###############################################################################
+#
+# Install awscli
+#
+###############################################################################
 easy_install pip
 pip install awscli
  
@@ -78,21 +83,5 @@ if [ $# -eq 2 ]; then
 	bash "${AWS_ENV_HOME}/duo/configure-duo" "${LOGIN_DUO_CONF_BUCKET}" "${LOGIN_DUO_CONF_KEY}"
 fi
 
-###############################################################################
-#
-# Set the MOTD
-#
-###############################################################################
-cat > /tmp/motd <<EOM
-------------------------------------------------------------------------------
-It won't hug you back!
-EOM
-
-sudo -u ec2-user figlet "${instance_id}" >> /tmp/motd
-
-cat >> /tmp/motd <<EOM
-------------------------------------------------------------------------------
-EOM
-
-cp /tmp/motd /etc/motd
+${AWS_ENV_HOME}/bin/set-motd
 
