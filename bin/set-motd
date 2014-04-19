@@ -1,6 +1,15 @@
 #!/bin/bash
 
+#my_full_path=$(readlink -f $0)
+#awsenv_root_dir=$(readlink -f $(dirname $my_full_path)/..)
+
+awsenv_root_dir=$(dirname $0)/..
+echo "Root dir: $awsenv_root_dir"
+. "${awsenv_root_dir}/bash-functions"
+
 yum install -y figlet
+
+__awsenv-get-metadata instance_id instance-id
 
 cat > /tmp/motd <<EOM
 ------------------------------------------------------------------------------
@@ -11,6 +20,7 @@ sudo -u ec2-user figlet "${instance_id}" >> /tmp/motd
 
 cat >> /tmp/motd <<EOM
 ------------------------------------------------------------------------------
+
 EOM
 
 cp /tmp/motd /etc/motd
