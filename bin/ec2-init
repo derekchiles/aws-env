@@ -2,10 +2,23 @@
 
 METADATA_URL="http://169.254.169.254/latest/meta-data"
 
-instance_id=$(curl -s ${METADATA_URL}/instance-id)
-role_name=$(curl -s ${METADATA_URL}/iam/security-credentials/)
+__ae-get-metadata() {
+	local __outvar="${1}"
+	local key="${2}"
 
-__aws-env-set-prompt() {
+	value=$(curl -s ${METADATA_URL}/${key})
+	$__outvar="${value}"
+}
+
+__ae-get-metadata instance_id instance-id
+__ae-get-metadata role_name iam/security-credentials/
+__ae-get-metadata az placement/availability-zone
+
+region="${az%?}"
+
+export AWS_DEFAULT_REGION="${region}"
+
+__ae-set-prompt() {
 	local -r NO_COLOR="\[\033[0m\]"
 	local -r WHITE="\[\033[1;37m\]"
 	local -r GRAY="\[\033[1;30m\]"
@@ -14,12 +27,28 @@ __aws-env-set-prompt() {
 	local -r RED="\[\033[0;31m\]"
 	local -r LIGHT_RED="\[\033[1;31m\]"
 
-	PS1="${WHITE}[${LIGHT_CYAN}\u${WHITE}@${CYAN}${instance_id}${WHITE}]${NO_COLOR}"
-	PS1="${PS1} ${WHITE}(${LIGHT_RED}${role_name}${WHITE})${NO_COLOR} $ "
+	# [local-user
+	PS1="${WHITE}[${LIGHT_CYAN}\u${WHITE}"
 
+	# @local-host]
+	PS1="${PS1}@${CYAN}${instance_id}${WHITE}]${NO_COLOR}"
+
+	# (aws-profile
+	PS1="${PS1} ${WHITE}(${LIGHT_RED}${role_name}${WHITE}"
+
+	# @aws-region)
+	PS1="${PS1}@${RED}\$(echo \${AWS_DEFAULT_REGION:-no-region})${WHITE})${NO_COLOR}"
+
+	# <wd> $
+	PS1="${PS1} \W \$ "
+
+	export PS1
 }
 
-__aws-env-set-prompt
+__ae-set-prompt
+
+unset -f __ae-set-prompt
+unset -f __ae-get-metadata
 
 set -o vi
 set -o notify
